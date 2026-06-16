@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Suspicious Alignment of SGD: A Fine-Grained Step Size Condition Analysis</title>
+  <meta name="description" content="Why does SGD's gradient align with the dominant Hessian subspace, yet updates along that subspace fail to reduce the loss? A fine-grained step-size condition analysis of the suspicious alignment phenomenon." />
+
+  <meta property="og:title" content="Suspicious Alignment of SGD: A Fine-Grained Step Size Condition Analysis" />
+  <meta property="og:description" content="An adaptive critical step size governs SGD's alignment dynamics, and a step-size interval explains why dominant-projected SGD raises the loss while bulk-projected SGD lowers it." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="static/images/concept.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="static/css/style.css" />
+
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+
+  <!-- ===== Nav ===== -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="#top">Suspicious Alignment</a>
+      <div class="nav-links">
+        <a href="#talks">Talks</a>
+        <a href="#puzzle">Puzzle</a>
+        <a href="#answer1">Step size</a>
+        <a href="#answer2">Subspaces</a>
+        <a href="#csgd">Two phases</a>
+        <a href="#experiments">Experiments</a>
+        <a href="#bibtex">BibTeX</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== Hero ===== -->
+  <header id="top" class="hero">
+    <div class="container">
+      <p class="venue-badge">ALT 2026</p>
+      <h1 class="title">Suspicious Alignment of SGD:<br />A Fine-Grained Step Size Condition Analysis</h1>
+
+      <div class="authors">
+        <span class="author"><a href="https://dsyforever.github.io/" target="_blank" rel="noopener">Shenyang Deng</a><sup>1</sup></span>
+        <span class="author"><a href="https://xuan-lgbq.github.io/" target="_blank" rel="noopener">Boyao Liao</a><sup>2</sup></span>
+        <span class="author"><a href="https://dominator-index.github.io/" target="_blank" rel="noopener">Zhuoli Ouyang</a><sup>1</sup></span>
+        <span class="author"><a href="https://tdcsz327.github.io/" target="_blank" rel="noopener">Tianyu Pang</a><sup>1</sup></span>
+        <span class="author">Minhak Song<sup>3</sup></span>
+        <span class="author"><a href="https://sites.google.com/site/yangyaoqingcmu/" target="_blank" rel="noopener">Yaoqing Yang</a><sup>1&#9993;</sup></span>
+      </div>
+
+      <div class="affiliations">
+        <span><sup>1</sup>Dartmouth College</span>
+        <span><sup>2</sup>University of Birmingham</span>
+        <span><sup>3</sup>KAIST</span>
+      </div>
+      <div class="affiliations note">
+        <span><sup>&#9993;</sup>Corresponding author: yaoqing.yang@dartmouth.edu</span>
+      </div>
+
+      <div class="buttons">
+        <a class="btn" href="static/paper.pdf" target="_blank" rel="noopener"><span class="ico">📄</span> Paper (PDF)</a>
+        <a class="btn btn-dark" href="https://github.com/xuan-lgbq/Suspicious-Alignment-of-SGD" target="_blank" rel="noopener"><span class="ico">💻</span> Code</a>
+        <a class="btn" href="#talks"><span class="ico">🎬</span> Talks</a>
+        <a class="btn" href="#bibtex"><span class="ico">❝</span> BibTeX</a>
+      </div>
+
+      <p class="tldr"><strong>TL;DR:</strong> On ill-conditioned landscapes, SGD's gradient aligns with the
+        dominant Hessian subspace &mdash; yet updates along it <em>fail to reduce the loss</em>. We give a
+        fine-grained, high-dimensional quadratic analysis showing how the <strong>step size</strong>
+        governs this "suspicious alignment", and pin down a step-size interval where dominant-projected SGD
+        <em>raises</em> the loss while bulk-projected SGD <em>lowers</em> it.</p>
+    </div>
+  </header>
+
+  <!-- ===== Teaser ===== -->
+  <section class="section teaser">
+    <div class="container narrow">
+      <figure>
+        <img src="static/images/concept.png" alt="Two-phase SGD dynamics on a river-valley landscape and alignment vs step" />
+        <figcaption><strong>Two-phase alignment dynamics.</strong> On an ill-conditioned (river-valley)
+          landscape with dominant direction $\mathcal{D}$ and bulk direction $\mathcal{B}$ (left), constant
+          step-size SGD first moves through a transient phase and then settles at high alignment (right):
+          the alignment $\theta_t$ rises and stabilizes near $1$ (spectral gap
+          $\lambda_k/\lambda_{k+1}=100$).</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ===== Abstract ===== -->
+  <section id="abstract" class="section">
+    <div class="container narrow">
+      <h2>Abstract</h2>
+      <p>
+        We study the <strong>suspicious alignment</strong> phenomenon in stochastic gradient descent (SGD)
+        under ill-conditioned optimization, where the Hessian spectrum splits into dominant and bulk
+        subspaces. During SGD, the alignment between the gradient and the dominant subspace first decreases,
+        then rises, and finally stabilizes at a high value. It is "suspicious" because, paradoxically,
+        projecting the update along this highly-aligned dominant subspace is ineffective at reducing the
+        loss.
+      </p>
+      <p>
+        We give a fine-grained analysis, in a high-dimensional quadratic setup, of how step-size selection
+        produces this phenomenon. We propose a step-size condition: in low-alignment regimes an adaptive
+        critical step size $\eta_t^*$ separates alignment-decreasing from alignment-increasing behavior,
+        while in high-alignment regimes the alignment is <em>self-correcting</em>. We further show that under
+        sufficient ill-conditioning there is a step-size interval where projecting SGD to the bulk space
+        decreases the loss while projecting to the dominant space increases it &mdash; explaining the recent
+        empirical observation that dominant-subspace updates are ineffective. Finally, for constant step
+        size and large initialization, we prove SGD exhibits a distinct two-phase behavior: an initial
+        alignment-decreasing phase, then stabilization at high alignment.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== Talks ===== -->
+  <section id="talks" class="section alt">
+    <div class="container">
+      <span class="eyebrow">Talks</span>
+      <h2>Watch the talks</h2>
+      <div class="talks">
+        <div class="talk">
+          <h3>Fields Institute</h3>
+          <div class="frame">
+            <iframe src="https://www.youtube-nocookie.com/embed/uRXzDT5L_Sk?start=2761"
+              title="Suspicious Alignment of SGD — Fields Institute talk"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen loading="lazy"></iframe>
+          </div>
+          <p class="meta"><a href="https://www.youtube.com/watch?v=uRXzDT5L_Sk&t=2761s" target="_blank" rel="noopener">Open on YouTube ↗</a></p>
+        </div>
+        <div class="talk">
+          <h3>Dartmouth&ndash;Berkeley&ndash;Rice AI Reading Group</h3>
+          <div class="frame">
+            <iframe src="https://drive.google.com/file/d/1ByfsVsaRM7DG_HPKRijWwpkVApFOgjHx/preview"
+              title="Suspicious Alignment of SGD — Dartmouth-Berkeley-Rice AI Reading Group talk"
+              allow="autoplay" allowfullscreen loading="lazy"></iframe>
+          </div>
+          <p class="meta"><a href="https://drive.google.com/file/d/1ByfsVsaRM7DG_HPKRijWwpkVApFOgjHx/view" target="_blank" rel="noopener">Open on Google Drive ↗</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Puzzle ===== -->
+  <section id="puzzle" class="section">
+    <div class="container narrow">
+      <span class="eyebrow">The puzzle</span>
+      <h2>Aligned with the steep directions &mdash; but going nowhere</h2>
+      <p>
+        Deep-network losses are ill-conditioned: the Hessian spectrum splits into a few high-curvature
+        <em>dominant</em> directions $\mathcal{D}$ and a vast, near-flat <em>bulk</em> $\mathcal{B}$ &mdash;
+        a "river-valley" landscape. As training proceeds, the gradient increasingly concentrates in
+        $\mathcal{D}$ (the <em>tiny-subspace</em> effect), which we measure by the alignment
+      </p>
+      <p class="display-eq">$$ \theta_t := \frac{\lVert \bm{P}^{\mathcal{D}}\nabla L(\bm{x}_t)\rVert_2^2}{\lVert \nabla L(\bm{x}_t)\rVert_2^2} \in [0,1]. $$</p>
+      <p>
+        Intuitively, $\theta_t\approx 1$ looks like an opportunity &mdash; optimization is focused on the
+        most curved directions. But recent work finds the opposite: at high alignment, SGD updates
+        <em>projected onto</em> $\mathcal{D}$ fail to decrease the loss, while the tiny bulk component does.
+        This is <strong>suspicious alignment</strong>, and it raises two questions:
+      </p>
+      <div class="callout">
+        <span class="q-ico">❓</span>
+        <p><strong>Problem 1.</strong> How does the step size $\eta_t$ govern the evolution of the alignment
+          $\theta_t$ in ill-conditioned landscapes?<br /><br />
+          <strong>Problem 2.</strong> Why does dominant-projected SGD (DSGD) fail to reduce the loss while
+          bulk-projected SGD (BSGD) succeeds under high alignment?</p>
+      </div>
+      <p>We answer both completely in the high-dimensional quadratic case ($d\to\infty$).</p>
+    </div>
+  </section>
+
+  <!-- ===== Answer 1 ===== -->
+  <section id="answer1" class="section alt">
+    <div class="container narrow">
+      <span class="eyebrow">Answer to Problem 1</span>
+      <h2>An adaptive critical step size governs alignment</h2>
+      <p>
+        We identify an adaptive critical step size $\eta_t^*(\bm{x}_t)$ that splits the dynamics into two
+        regimes:
+      </p>
+      <div class="cards">
+        <div class="card">
+          <div class="card-ico">🔀</div>
+          <h3>Low-alignment regime</h3>
+          <p>When $\theta_t \le g_{\mathrm{gap}}$, alignment <em>depends on the step size</em>: if
+            $\eta_t<\eta_t^*$ then $\mathbb{E}[\theta_{t+1}\mid\bm{x}_t]<\theta_t$ (alignment drops); if
+            $\eta_t>\eta_t^*$ it rises.</p>
+        </div>
+        <div class="card">
+          <div class="card-ico">🧲</div>
+          <h3>High-alignment regime</h3>
+          <p>When $\theta_t \ge \theta_t^*$, alignment is <em>self-correcting</em>:
+            $\mathbb{E}[\theta_{t+1}\mid\bm{x}_t]<\theta_t$ for <strong>any</strong> $\eta_t>0$ &mdash; it
+            decreases no matter the step size.</p>
+        </div>
+      </div>
+      <p style="margin-top:22px;">
+        These regimes are separated by a stable interval $(g_{\mathrm{gap}},\,\theta_t^*)$ into which
+        $\theta_t$ tends to oscillate. As the ill-conditioning grows, both thresholds approach $1$:
+        $g_{\mathrm{gap}},\theta_t^* \to 1$ as $\lambda_k/\lambda_{k+1}\to\infty$.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== Answer 2 ===== -->
+  <section id="answer2" class="section">
+    <div class="container narrow">
+      <span class="eyebrow">Answer to Problem 2</span>
+      <h2>A stability gap between the two subspaces</h2>
+      <p>
+        For a projected update onto subspace $\mathcal{S}\in\{\mathcal{D},\mathcal{B}\}$, the expected loss
+        decreases iff $\eta_t<\eta^{\mathrm{loss}}_{\mathcal{S}}(\bm{x}_t)$, where
+      </p>
+      <p class="display-eq">$$ \eta^{\mathrm{loss}}_{\mathcal{S}}(\bm{x}_t) = \frac{2\sum_{i\in\mathcal{S}}\lambda_i^2 c_{i,t}^2}{\sum_{i\in\mathcal{S}}\lambda_i^4 c_{i,t}^2 + \sum_{i\in\mathcal{S}}\lambda_i\kappa_i^2}. $$</p>
+      <p>
+        There is a critical alignment $\theta^{\mathrm{crit}}_t\in(0,1)$ with
+        $\theta_t<\theta^{\mathrm{crit}}_t \iff \eta^{\mathrm{loss}}_{\mathcal{D}}<\eta^{\mathrm{loss}}_{\mathcal{B}}$.
+        As $\lambda_k/\lambda_{k+1}\to\infty$, $\theta^{\mathrm{crit}}_t\to 1$, so for nearly all
+        $\theta_t<1$ an interval opens up:
+      </p>
+      <div class="callout amber">
+        <span class="q-ico">⚠️</span>
+        <p>When the step size lies in $\big(\eta^{\mathrm{loss}}_{\mathcal{D}},\,\eta^{\mathrm{loss}}_{\mathcal{B}}\big)$,
+          <strong>DSGD increases the loss while BSGD decreases it</strong> &mdash; resolving the paradox of
+          ineffective dominant-subspace updates.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Constant step size ===== -->
+  <section id="csgd" class="section alt">
+    <div class="container narrow">
+      <span class="eyebrow">Constant step size</span>
+      <h2>Two-phase dynamics of $\theta_t$</h2>
+      <p>Putting the step-size theory to work, for constant step size and large initialization we prove SGD
+        follows a clean two-phase trajectory:</p>
+      <div class="facts">
+        <div class="fact">
+          <span class="num">1</span>
+          <p><strong>Transient phase.</strong> The alignment monotonically <em>decreases</em> in
+            expectation &mdash; large early steps push the iterate off the dominant directions.</p>
+        </div>
+        <div class="fact">
+          <span class="num">2</span>
+          <p><strong>Equilibrium phase.</strong> The alignment then converges to a noise- and
+            spectrum-dependent limit $\theta_\infty$, settling at high alignment &mdash; explaining the
+            shape seen in the teaser and experiments.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Experiments ===== -->
+  <section id="experiments" class="section">
+    <div class="container">
+      <span class="eyebrow">Numerical experiments</span>
+      <h2>High-dimensional quadratic simulations confirm the theory</h2>
+
+      <figure class="fig-sm">
+        <img src="static/images/sim_m50.png" alt="Loss and alignment vs step for spectral gap m=50" />
+        <figcaption><strong>Loss and alignment over training ($m=\lambda_k/\lambda_{k+1}=50$).</strong> The
+          loss decreases and plateaus (left) while the alignment rises and stabilizes at high value (right)
+          &mdash; exactly the predicted two-phase behavior.</figcaption>
+      </figure>
+
+      <figure class="fig-sm">
+        <img src="static/images/align_vs_m.png" alt="Expected alignment and its standard deviation vs spectral gap m" />
+        <figcaption><strong>Equilibrium alignment vs. ill-conditioning.</strong> As the spectral gap
+          $m=\lambda_k/\lambda_{k+1}$ grows, the equilibrium alignment $\mathbb{E}[\theta]$ approaches $1$
+          (left) and its variability shrinks (right) &mdash; matching the prediction that the thresholds
+          $\to 1$ as ill-conditioning increases. Results are consistent across random seeds.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ===== BibTeX ===== -->
+  <section id="bibtex" class="section alt">
+    <div class="container narrow">
+      <h2>BibTeX</h2>
+      <div class="bibtex-box">
+        <button class="copy-btn" data-target="bib-main">Copy</button>
+        <pre id="bib-main"><code>@inproceedings{deng2026suspicious,
+  title     = {Suspicious Alignment of SGD: A Fine-Grained Step Size Condition Analysis},
+  author    = {Deng, Shenyang and Liao, Boyao and Ouyang, Zhuoli and
+               Pang, Tianyu and Song, Minhak and Yang, Yaoqing},
+  booktitle = {Proceedings of the International Conference on Algorithmic Learning Theory (ALT)},
+  year      = {2026}
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="container narrow">
+      <p>Project page for the ALT 2026 paper "Suspicious Alignment of SGD: A Fine-Grained Step Size Condition Analysis".</p>
+      <p>
+        <a href="static/paper.pdf" target="_blank" rel="noopener">Paper (PDF)</a> ·
+        <a href="https://github.com/xuan-lgbq/Suspicious-Alignment-of-SGD" target="_blank" rel="noopener">Code</a> ·
+        <a href="#talks">Talks</a>
+      </p>
+    </div>
+  </footer>
+
+  <script src="static/js/script.js"></script>
+</body>
+</html>
